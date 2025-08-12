@@ -2,29 +2,22 @@ const express = require('express');
 const cors = require('cors');
 
 const app = express();
-const PORT = process.env.PORT || 3000;
-
 app.use(cors());
 app.use(express.json());
 
-let players = []; // メモリ上に保存（Railway再起動で消える）
+// テスト用の簡易データ格納場所（実際はDBを使う）
+let players = [];
 
-// ユーザー登録
-app.post('/register', (req, res) => {
-  const { name, game, timestamp } = req.body;
-  if (!name || !game) {
-    return res.status(400).json({ error: 'Invalid data' });
-  }
-  players.push({ name, game, timestamp });
-  console.log(players);
-  res.json({ message: 'Registration successful', players });
+app.post('/', (req, res) => {
+  const player = req.body;
+  players.push(player);
+  console.log('Registered Player:', player);
+  res.json({ message: 'Registration successful' });
 });
 
-// 登録データ取得
 app.get('/players', (req, res) => {
   res.json(players);
 });
 
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
-});
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
