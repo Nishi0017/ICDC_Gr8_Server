@@ -1,43 +1,45 @@
+// server.js
 const express = require('express');
+const fs = require('fs');
+const path = require('path');
 const cors = require('cors');
-const mysql = require('mysql2/promise');
 
 const app = express();
+const PORT = process.env.PORT || 3000;
+
 app.use(cors());
 app.use(express.json());
 
-// MySQL接続プール作成（Railway環境変数利用）
-const pool = mysql.createPool({
-  host: process.env.MYSQLHOST,
-  user: process.env.MYSQLUSER,
-  password: process.env.MYSQLPASSWORD,
-  database: process.env.MYSQLDATABASE,
-  port: process.env.MYSQLPORT
-});
+const DATA_FILE = path.join(__dirname, 'players.json');
 
-// プレイヤー登録
-app.post('/', async (req, res) => {
-  const { name, game, timestamp } = req.body;
-  try {
-    const sql = 'INSERT INTO players (name, game, timestamp) VALUES (?, ?, ?)';
-    await pool.query(sql, [name, game, timestamp]);
-    res.json({ message: 'Registration successful' });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ message: 'Database error' });
+// POST: プレイヤー登録
+app.post('/', (req, res) => {
+  const player = req.body;
+
+  // ファイルが存在しない場合は空配列で初期化
+  let players = [];
+  if (fs.existsSync(DATA_FILE)) {
+    players = JSON.parse(fs.readFileSync(DATA_FILE, 'utf8'));
   }
+
+  // 新しいプレイヤー追加
+  players.push(player);
+
+  // JSONファイルに保存
+  fs.writeFileSync(DATA_FILE, JSON.stringify(players, null, 2));
+
+  res.json({ message: 'Player registered successfully!' });
 });
 
-// 登録されたプレイヤー取得（確認用）
-app.get('/players', async (req, res) => {
-  try {
-    const [rows] = await pool.query('SELECT * FROM players');
-    res.json(rows);
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ message: 'Database error' });
+// GET: 登録済みプレイヤー取得
+app.get('/players', (req, res) => {
+  if (!fs.existsSync(DATA_FILE)) {
+    return res.json([]);
   }
+  const players = JSON.parse(fs.readFileSync(DATA_FILE, 'utf8'));
+  res.json(players);
 });
 
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+app.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`);
+});
