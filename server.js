@@ -42,6 +42,11 @@ app.get('/players', (req, res) => {
   });
 });
 
+// DELETE: 全プレイヤー削除
+app.delete('/players', (req, res) => {
+  fs.writeFileSync(DATA_FILE, JSON.stringify([], null, 2));
+  res.json({ message: 'All players deleted successfully!' });
+});
 
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
