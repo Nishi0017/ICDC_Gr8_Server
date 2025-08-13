@@ -44,9 +44,14 @@ app.get('/players', (req, res) => {
 
 // DELETE: 全プレイヤー削除
 app.delete('/players', (req, res) => {
-  fs.writeFileSync(DATA_FILE, JSON.stringify([], null, 2));
-  res.json({ message: 'All players deleted successfully!' });
+  if (fs.existsSync(DATA_FILE)) {
+    fs.writeFileSync(DATA_FILE, JSON.stringify([], null, 2));
+    res.json({ message: 'All players deleted successfully!' });
+  } else {
+    res.status(404).json({ error: 'No players.json file found' });
+  }
 });
+
 
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
