@@ -33,12 +33,15 @@ app.post('/', (req, res) => {
 
 // GET: 登録済みプレイヤー取得
 app.get('/players', (req, res) => {
-  if (!fs.existsSync(DATA_FILE)) {
-    return res.json([]);
-  }
-  const players = JSON.parse(fs.readFileSync(DATA_FILE, 'utf8'));
-  res.json(players);
+  const fs = require('fs');
+  const path = require('path');
+  const filePath = path.join(__dirname, 'players.json');
+  fs.readFile(filePath, 'utf8', (err, data) => {
+    if (err) return res.status(500).json({ error: '読み込み失敗' });
+    res.json(JSON.parse(data || '[]'));
+  });
 });
+
 
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
