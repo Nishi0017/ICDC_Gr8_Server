@@ -12,69 +12,84 @@ app.use(express.json());
 
 const DATA_FILE = path.join(__dirname, 'players.json');
 
-// POST: プレイヤー登録
+// ==== ユーティリティ関数 ====
+function readPlayers() {
+  try {
+    if (!fs.existsSync(DATA_FILE)) return [];
+    const data = fs.readFileSync(DATA_FILE, 'utf8');
+    return JSON.parse(data || '[]');
+  } catch (err) {
+    console.error('players.json 読み込み失敗:', err);
+    return [];
+  }
+}
+
+function writePlayers(players) {
+  try {
+    fs.writeFileSync(DATA_FILE, JSON.stringify(players, null, 2));
+    return true;
+  } catch (err) {
+    console.error('players.json 書き込み失敗:', err);
+    return false;
+  }
+}
+
+// ==== POST: プレイヤー登録 ====
 app.post('/', (req, res) => {
   const player = req.body;
-
-  // ファイルが存在しない場合は空配列で初期化
-  let players = [];
-  if (fs.existsSync(DATA_FILE)) {
-    players = JSON.parse(fs.readFileSync(DATA_FILE, 'utf8'));
-  }
-
-  // 新しいプレイヤー追加
+  const players = readPlayers();
   players.push(player);
 
-  // JSONファイルに保存
-  fs.writeFileSync(DATA_FILE, JSON.stringify(players, null, 2));
+  if (!writePlayers(players)) {
+    return res.status(500).json({ error: '登録失敗' });
+  }
 
   res.json({ message: 'Player registered successfully!' });
 });
 
-// GET: 登録済みプレイヤー取得
+// ==== GET: 全プレイヤー取得 ====
 app.get('/players', (req, res) => {
-  const fs = require('fs');
-  const path = require('path');
-  const filePath = path.join(__dirname, 'players.json');
-  fs.readFile(filePath, 'utf8', (err, data) => {
-    if (err) return res.status(500).json({ error: '読み込み失敗' });
-    res.json(JSON.parse(data || '[]'));
-  });
+  const players = readPlayers();
+  res.json(players);
 });
 
-// DELETE: 全プレイヤー削除
-app.delete('/players', (req, res) => {
-  if (fs.existsSync(DATA_FILE)) {
-    fs.writeFileSync(DATA_FILE, JSON.stringify([], null, 2));
-    res.json({ message: 'All players deleted successfully!' });
-  } else {
-    res.status(404).json({ error: 'No players.json file found' });
+// ==== GET: 個別プレイヤー取得 ====
+app.get('/players/:name', (req, res) => {
+  const name = req.params.name;
+  const players = readPlayers();
+  const player = players.find(p => p.name === name);
+  if (!player) {
+    return res.status(404).json({ error: `${name} が見つかりません` });
   }
+  res.json(player);
 });
 
-// DELETE: 特定プレイヤー削除
+// ==== DELETE: 全プレイヤー削除 ====
+app.delete('/players', (req, res) => {
+  if (!writePlayers([])) {
+    return res.status(500).json({ error: '削除失敗' });
+  }
+  res.json({ message: 'All players deleted successfully!' });
+});
+
+// ==== DELETE: 特定プレイヤー削除 ====
 app.delete('/players/:name', (req, res) => {
   const playerName = req.params.name;
-
-  if (!fs.existsSync(DATA_FILE)) {
-    return res.status(404).json({ error: 'players.json が存在しません' });
-  }
-
-  let players = JSON.parse(fs.readFileSync(DATA_FILE, 'utf8'));
-
-  // 該当プレイヤーを除外
+  const players = readPlayers();
   const filteredPlayers = players.filter(p => p.name !== playerName);
 
   if (filteredPlayers.length === players.length) {
     return res.status(404).json({ error: `${playerName} が見つかりません` });
   }
 
-  fs.writeFileSync(DATA_FILE, JSON.stringify(filteredPlayers, null, 2));
+  if (!writePlayers(filteredPlayers)) {
+    return res.status(500).json({ error: '削除失敗' });
+  }
+
   res.json({ message: `${playerName} を削除しました` });
 });
 
-
-
+// ==== サーバー起動 ====
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });
